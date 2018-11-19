@@ -31,12 +31,14 @@ public class Router {
     }
 
     public Router(String name, String direccion, String mascara, ArrayList<String> conecciones, ArrayList<Integer> costos) {
+        this.tablaEnrrutamiento = new ArrayList<>();
         this.name = name;
         this.direccion = direccion;
         this.mascara = mascara;
         this.conecciones = conecciones;
         this.costos = costos;
         this.tablaEnrrutamiento = new ArrayList<>();
+        iniciarTabla();
     }
 
     public String getName() {
@@ -61,10 +63,6 @@ public class Router {
 
     public void setMascara(String mascara) {
         this.mascara = mascara;
-    }
-
-    public ArrayList<String> getCenecciones() {
-        return conecciones;
     }
 
     public void setCenecciones(ArrayList<String> cenecciones) {
@@ -95,7 +93,74 @@ public class Router {
         this.tablaEnrrutamiento = tablaEnrrutamiento;
     }
 
+    public void iniciarTabla() {
+        this.tablaEnrrutamiento.add(this.conecciones);
+        ArrayList<String> c = new ArrayList<>();
+        for (int i = 0; i < costos.size(); i++) {
+            c.add("" + costos.get(i));
+        }
+        this.tablaEnrrutamiento.add(c);
+    }
+
+    public void addTabla(String name, String value) {
+        this.tablaEnrrutamiento.get(0).add(name);
+        this.tablaEnrrutamiento.get(1).add(value);
+    }
+
+    public void updateinfoTabla(int i, String name, String value) {
+        this.tablaEnrrutamiento.get(0).set(i, name);
+        this.tablaEnrrutamiento.get(1).set(i, value);
+    }
+
+    //calcular mejor ruta 
+    public boolean updateTabla(Router r) {
+        
+        boolean modificacion=false;
+        ArrayList<ArrayList<String>> tabla2 = r.getTablaEnrrutamiento();
+        for (int i = 0; i < tablaEnrrutamiento.get(0).size(); i++) {
+            for (int j = 0; j < tabla2.get(0).size(); j++) {
+                if(!findRout(tabla2.get(0).get(j)) && !tabla2.get(0).get(j).equals(this.name) ){
+                    this.tablaEnrrutamiento.get(0).add(tabla2.get(0).get(j));
+                    int value = valConection(r.getName());
+                    int value2 = Integer.parseInt(tabla2.get(1).get(j));
+                    this.tablaEnrrutamiento.get(1).add(""+(value+value2));
+                    System.out.println(tablaEnrrutamiento.get(0).toString());
+                    System.out.println(tablaEnrrutamiento.get(1).toString());
+                    modificacion=true;
+                }else if (tablaEnrrutamiento.get(0).get(i).equals(tabla2.get(0).get(j))&& !tabla2.get(0).get(j).equals(this.name)) {
+                    int value = Integer.parseInt(tablaEnrrutamiento.get(1).get(i));
+                    int value2 = Integer.parseInt(tabla2.get(1).get(j));
+                    int value3 = value2+valConection(r.getName());
+                    if(value3<value){
+                        tablaEnrrutamiento.get(1).set(i, ""+value3);
+                        System.out.println(tablaEnrrutamiento.get(0).toString());
+                        System.out.println(tablaEnrrutamiento.get(1).toString());
+                        modificacion=true;
+                    }
+                }
+            }
+        }
+        return modificacion;
+    }
     
-    
-    
+    public int valConection(String name){
+        int val=0;
+        for (int i = 0; i < this.costos.size(); i++) {
+            if(this.conecciones.get(i).equals(name)){
+               val=this.costos.get(i);
+               break;
+            }
+        }
+        return val;
+    }
+
+    public boolean findRout(String n){
+        boolean val=false;
+        for (int i = 0; i < this.tablaEnrrutamiento.get(0).size(); i++) {
+            if(n.equals(this.tablaEnrrutamiento.get(0).get(i))){
+                val=true;
+            }
+        }
+        return val;
+    }
 }

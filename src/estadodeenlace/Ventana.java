@@ -22,7 +22,7 @@ public class Ventana {
         
         frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(500,500);
+        frame.setSize(700,500);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.setBackground(Color.white);

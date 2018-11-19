@@ -10,10 +10,8 @@ import Modelo.RouterAnimation;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,10 +24,6 @@ import javax.swing.border.EmptyBorder;
 public final class Servidor {
 
     private ServerSocket echoServer;
-    private String line;
-    private DataInputStream is;
-    private PrintStream os;
-    private Socket clientSocket;
     private ArrayList<Router> Routers;
     private Ventana v;
     private animation animacion;
@@ -37,14 +31,7 @@ public final class Servidor {
     public Servidor() {
         this.Routers = new ArrayList<>();
         v = new Ventana();
-        // declaration section:
-// declare a server socket and a client socket for the server
-// declare an input and an output stream
         echoServer = null;
-        clientSocket = null;
-// Try to open a server socket on port 9999
-// Note that we can't choose a port less than 1023 if we are not
-// privileged users (root)
         try {
             echoServer = new ServerSocket(9999);
         } catch (IOException e) {
@@ -57,9 +44,6 @@ public final class Servidor {
         nuevaAnimacion();
         this.v.start();
         try {
-//            clientSocket = echoServer.accept();
-//            is = new DataInputStream(clientSocket.getInputStream());
-//            os = new PrintStream(clientSocket.getOutputStream());
             while (true) {
 
                 Socket socket;
@@ -93,15 +77,18 @@ public final class Servidor {
                     costos.add(Integer.parseInt(cos[i]));
                 }
                 e.setCostos(costos);
+                e.iniciarTabla();
                 this.Routers.add(e);
                 res = "router conectado";
                 nuevoRouter(e);
-            } else if (peticion[0].equals("Hello")) {
+            } else if (peticion[0].equals("hello")) {
                 Router e = new Router();
                 e.setName(peticion[1]);
                 e.setDireccion(peticion[2]);
                 e.setMascara(peticion[3]);
                 res = sendHello(e.getName());
+            } else if (peticion[0].equals("updatetabla")) {
+                UpdateRouter(peticion[1], peticion[2].split(","), peticion[3].split(","));
             }
 
         } else {
@@ -112,15 +99,42 @@ public final class Servidor {
     }
 
     public String sendHello(String name) {
-        String res = "";
+        String res = "inforouting";
         for (int i = 0; i < this.Routers.size(); i++) {
+            if (this.Routers.get(i).getName().equals(name)) {
+                for (int j = 0; j < Routers.get(i).getConecciones().size(); j++) {
+                    this.animacion.addMensaje(name, name + ":hello", this.animacion.getPosxRouter(Routers.get(i).getConecciones().get(j)), this.animacion.getPosyRouter(Routers.get(i).getConecciones().get(j)));
+//                    for (int k = 0; k < this.Routers.size(); k++) {
+//                        if (this.Routers.get(k).getName().equals(Routers.get(i).getCenecciones().get(j))) {
+//                            res += " " + this.Routers.get(k).getName() + " ";
+//                            for (int l = 0; l < this.Routers.get(k).getCenecciones().size(); l++) {
+//                                res += this.Routers.get(k).getCenecciones().get(l);
+//                                if (l < this.Routers.get(k).getCenecciones().size() - 1) {
+//                                    res += ",";
+//                                }
+//                            }
+//                            for (int l = 0; l < this.Routers.get(k).getCostos().size(); l++) {
+//                                res += this.Routers.get(k).getCostos().get(l);
+//                                if (l < this.Routers.get(k).getCostos().size() - 1) {
+//                                    res += ",";
+//                                }
+//                            }
+//                            break;
+//                        }
+//                    }
+                }
+                break;
+            }
 
         }
+        System.out.println("res: " + res);
+        animacion.revalidate();
+        animacion.repaint();
         return res;
     }
 
     public void nuevaAnimacion() {
-        this.animacion = new animation();
+        this.animacion = new animation(this);
         this.animacion.setBorder(new EmptyBorder(5, 5, 5, 5));
         this.animacion.setBounds(0, 0, 500, 500);
         this.animacion.setLayout(null);
@@ -133,19 +147,66 @@ public final class Servidor {
             x = 100;
             y = 100;
         } else if (this.Routers.size() == 2) {
+            x = 100;
+            y = 350;
+        } else if (this.Routers.size() == 3) {
+            x = 350;
+            y = 350;
+        } else {
             x = 350;
             y = 100;
-        } else if (this.Routers.size() == 2){
-            x = 100;
-            y = 300;
-        }else{
-            x = 350;
-            y = 300;
+
         }
         RouterAnimation r2 = new RouterAnimation(r, x, y);
         this.animacion.addRouter(r2);
         animacion.revalidate();
         animacion.repaint();
+    }
+
+    public void UpdateRouter(String name, String[] rout, String[] cost) {
+        for (int i = 0; i < this.Routers.size(); i++) {
+            Router r = this.Routers.get(i);
+            if (r.getName().equals(name)) {
+                ArrayList<ArrayList<String>> t = r.getTablaEnrrutamiento();
+                for (int j = 0; j < rout.length; j++) {
+                    if (j < t.get(0).size() - 1) {
+                        t.get(0).set(i, rout[j]);
+                        t.get(1).set(i, cost[j]);
+                    } else {
+                        t.get(0).add(rout[j]);
+                        t.get(1).add(cost[j]);
+                    }
+                }
+                this.Routers.get(i).setTablaEnrrutamiento(t);
+                this.animacion.updateRouter(this.Routers.get(i));
+                break;
+            }
+        }
+
+        animacion.revalidate();
+        animacion.repaint();
+    }
+
+    public void validarTabla(RouterAnimation a, RouterAnimation b) {
+        if (a.getRouter().updateTabla(b.getRouter())) {
+            for (int i = 0; i < a.getRouter().getConecciones().size(); i++) {
+                if (!a.getRouter().getConecciones().get(i).equals(b.getRouter().getName())) {
+                    ArrayList<RouterAnimation> r = this.animacion.getRouters();
+                    for (int j = 0; j < r.size(); j++) {
+                        if (r.get(j).getRouter().getName().equals(a.getRouter().getConecciones().get(i))) {
+                            this.animacion.addMensaje(a.getRouter().getName(), a.getRouter().getName() + ":Link State Packets",
+                                     r.get(j).getX(), r.get(j).getY());
+                        }
+                    }
+
+                }
+            }
+            animacion.updateRouter(a.getRouter());
+            animacion.revalidate();
+            animacion.repaint();
+        } else {
+            System.out.println(" no actualizo");
+        }
     }
 
     public static void main(String[] args) {
@@ -187,6 +248,7 @@ public final class Servidor {
                 accion = dis.readUTF();
                 System.out.println("cliente: " + accion);
                 String response = validarPeticion(accion);
+                System.out.println("res: " + response);
                 dos.writeUTF(response);
 //            accion = dis.readUTF();
 //            if(accion.equals("hola")){
